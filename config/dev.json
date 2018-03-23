@@ -1,0 +1,5 @@
+{
+    "databasetype": "mongo",
+    "databaseurl": "mongodb://127.0.0.1",
+    "databasename": "time-tracker-dev"
+}

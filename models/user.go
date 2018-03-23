@@ -2,85 +2,66 @@ package models
 
 import (
 	"errors"
-	"strconv"
-	"time"
+
+	"github.com/joshuakwan/time-tracker/dal"
+	"github.com/joshuakwan/time-tracker/utils"
+	"gopkg.in/mgo.v2/bson"
 )
 
-var (
-	UserList map[string]*User
+const (
+	userTableName = "Users"
 )
-
-func init() {
-	UserList = make(map[string]*User)
-	u := User{"user_11111", "astaxie", "11111", Profile{"male", 20, "Singapore", "astaxie@gmail.com"}}
-	UserList["user_11111"] = &u
-}
 
 type User struct {
-	Id       string
-	Username string
-	Password string
-	Profile  Profile
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
-type Profile struct {
-	Gender  string
-	Age     int
-	Address string
-	Email   string
+// GetUsersByEmail queries user by an email address
+func GetUsersByEmail(email string) ([]User, error) {
+	var result []User
+	err := db.GetSession().FindObjects(userTableName, "email:"+email, &result)
+	return result, err
 }
 
-func AddUser(u User) string {
-	u.Id = "user_" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	UserList[u.Id] = &u
-	return u.Id
+// GetAllUsers returns all users
+func GetAllUsers() ([]User, error) {
+	var result []User
+	err := db.GetSession().GetAllObjects(userTableName, &result)
+	return result, err
 }
 
-func GetUser(uid string) (u *User, err error) {
-	if u, ok := UserList[uid]; ok {
-		return u, nil
+// CreateUser creates a new user
+func CreateUser(name, email string) (*User, error) {
+	existingUsers, err := GetUsersByEmail(email)
+
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("User not exists")
-}
 
-func GetAllUsers() map[string]*User {
-	return UserList
-}
-
-func UpdateUser(uid string, uu *User) (a *User, err error) {
-	if u, ok := UserList[uid]; ok {
-		if uu.Username != "" {
-			u.Username = uu.Username
-		}
-		if uu.Password != "" {
-			u.Password = uu.Password
-		}
-		if uu.Profile.Age != 0 {
-			u.Profile.Age = uu.Profile.Age
-		}
-		if uu.Profile.Address != "" {
-			u.Profile.Address = uu.Profile.Address
-		}
-		if uu.Profile.Gender != "" {
-			u.Profile.Gender = uu.Profile.Gender
-		}
-		if uu.Profile.Email != "" {
-			u.Profile.Email = uu.Profile.Email
-		}
-		return u, nil
+	if len(existingUsers) > 0 {
+		return nil, errors.New("user " + email + " exists")
 	}
-	return nil, errors.New("User Not Exist")
+
+	user := User{ID: utils.GenerateUUID(), Name: name, Email: email}
+	err = db.GetSession().CreateObject(userTableName, user)
+	return &user, err
 }
 
-func Login(username, password string) bool {
-	for _, u := range UserList {
-		if u.Username == username && u.Password == password {
-			return true
-		}
+// Delete removes a user itself from DB
+func (user *User) Delete() error {
+	_, err := GetUsersByEmail(user.Email)
+	if err != nil {
+		return err
 	}
-	return false
+
+	err = db.GetSession().RemoveObject(userTableName, "email:"+user.Email)
+	return err
 }
 
-func DeleteUser(uid string) {
-	delete(UserList, uid)
+// Update updates a user itself
+func (user *User) Update() error {
+	err := db.GetSession().UpdateObject(userTableName, bson.M{"email": user.Email}, user)
+	return err
 }

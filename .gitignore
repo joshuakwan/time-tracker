@@ -1,0 +1,4 @@
+.vscode/
+api/routers/commentsRouter*
+api/api
+api/lastupdate.tmp

@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "github.com/joshuakwan/time-tracker/routers"
+	_ "github.com/joshuakwan/time-tracker/api/routers"
 
 	"github.com/astaxie/beego"
 )
